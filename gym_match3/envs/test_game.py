@@ -86,7 +86,7 @@ class TestBoard(unittest.TestCase):
             Point(10, 0),
             Point(0, 2),
         ]
-        for ind, point in enumerate(points):
+        for point in points:
             with self.subTest(point=point.get_coord()):
                 with self.assertRaises(OutOfBoardError):
                     self.board.get_shape(point)

@@ -25,7 +25,7 @@ class AbstractPoint(ABC):
         pass
 
     @abstractmethod
-    def __hash__(self, other):
+    def __hash__(self):
         pass
 
 
@@ -320,7 +320,7 @@ class AbstractSearcher(ABC):
 class AbstractMatchesSearcher(ABC):
 
     @abstractmethod
-    def scan_board_for_matches(slef, board: Board):
+    def scan_board_for_matches(self, board: Board):
         pass
 
 
@@ -352,7 +352,6 @@ class MatchesSearcher(AbstractSearcher):
         return match3_list
 
     def __generator_neighbours(self, board: Board, point: Point):
-        neighbours = []
         for axis_dirs in self.directions:
             new_points = [point + Point(*dir_) for dir_ in axis_dirs]
             try:
@@ -418,7 +417,7 @@ class Filler(AbstractFiller):
         self.__fill(board)
 
     def __move_nans(self, board: Board):
-        rows, cols = board.board_size
+        _, cols = board.board_size
         for col_ind in range(cols):
             line = board.get_line(col_ind)
             if np.any(np.isnan(line)):
@@ -460,7 +459,7 @@ class AbstractGame(ABC):
 
 class Game(AbstractGame):
 
-    def __init__(self, rows, columns, n_shapes, length, random_state):
+    def __init__(self, rows, columns, n_shapes, length, random_state=None):
         self.board = Board(
             rows=rows,
             columns=columns,
