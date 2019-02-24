@@ -3,3 +3,4 @@ class GameConfiguration:
     NUM_ROWS = 8
     NUM_COLS = 8
     MATCH_LENGTH = 3
+    MOVES_PER_SEESION = 100

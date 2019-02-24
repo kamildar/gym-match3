@@ -1,16 +1,16 @@
 import unittest
 import numpy as np
-from game import (Board,
-                  RandomBoard,
-                  CustomBoard,
-                  Point,
-                  Cell,
-                  AbstractSearcher,
-                  MatchesSearcher,
-                  Filler,
-                  Game,
-                  MovesSearcher,
-                  OutOfBoardError)
+from .game import (Board,
+                   RandomBoard,
+                   CustomBoard,
+                   Point,
+                   Cell,
+                   AbstractSearcher,
+                   MatchesSearcher,
+                   Filler,
+                   Game,
+                   MovesSearcher,
+                   OutOfBoardError)
 
 
 class TestBoard(unittest.TestCase):

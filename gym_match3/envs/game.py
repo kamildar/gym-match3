@@ -487,15 +487,18 @@ class Game(AbstractGame):
         return self
 
     def move(self, point: Point, direction: Point):
+        score = 0
         matches = self.__check_matches(
             point, direction)
         if len(matches) > 0:
+            score += len(matches)
+
             self.board.move(point, direction)
             self.board.delete(matches)
             self.__filler.move_and_fill(self.board)
+            score += self.__operate_untill_possible_moves()
 
-            self.__operate_untill_possible_moves()
-        return len(matches)
+        return score
 
     def __check_matches(self, point: Point, direction: Point):
         tmp_board = self.__get_copy_of_board()
@@ -511,9 +514,9 @@ class Game(AbstractGame):
         scan board, then delete matches, move nans, fill
         repeat untill no matches and appear possible moves
         """
-        self.__scan_del_mvnans_fill_untill()
+        score = self.__scan_del_mvnans_fill_untill()
         self.__shuffle_untill_possible()
-        return self
+        return score
 
     def __get_matches(self):
         return self.__mtch_searcher.scan_board_for_matches(self.board)
@@ -522,12 +525,15 @@ class Game(AbstractGame):
         return self.__mv_searcher.search_moves(self.board)
 
     def __scan_del_mvnans_fill_untill(self):
+        score = 0
         matches = self.__get_matches()
+        score += len(matches)
         while len(matches) > 0:
             self.board.delete(matches)
             self.__filler.move_and_fill(self.board)
             matches = self.__get_matches()
-        return self
+            score += len(matches)
+        return score
 
     def __shuffle_untill_possible(self):
         possible_moves = self.__get_possible_moves()

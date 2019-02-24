@@ -4,6 +4,7 @@ from gym.utils import seeding
 
 from gym_match3.envs.game import RandomGame, Point, OutOfBoardError
 from gym_match3.envs.configurations import GameConfiguration
+from gym_match3.envs.renderer import Renderer
 
 from itertools import product
 
@@ -30,9 +31,9 @@ class Match3Env(gym.Env):
         self.__match3_actions = self.__get_availiable_actions()
         self.action_space = spaces.Discrete(
             len(self.__match3_actions))
+        self.n_shapes = GameConfiguration.NUM_SHAPES
 
-    # def __calc_num_actions(self, rows, cols):
-    #     return rows * cols * 4 - 4 * 2 - (rows - 2) * 2- (cols - 2) * 2
+        self.renderer = Renderer(GameConfiguration.NUM_SHAPES)
 
     def __get_directions(self, board_ndim):
         directions = [
@@ -86,4 +87,4 @@ class Match3Env(gym.Env):
         return self.__game.board.board
 
     def render(self, mode='human', close=False):
-        return None
+        self.renderer.render_board(self.__get_board())
