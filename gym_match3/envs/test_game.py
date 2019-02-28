@@ -136,6 +136,16 @@ class TestPoint(unittest.TestCase):
         result = self.point1 + self.point2
         self.assertEqual(true.get_coord(), result.get_coord())
 
+    def test_mul(self):
+        true = Point(-5, -10)
+        result = Point(5, 10) * -1
+        self.assertEqual(true, result)
+
+    def test_sub(self):
+        true = Point(-1, -1)
+        result = Point(0, 0) - Point(1, 1)
+        self.assertEqual(true, result)
+
 
 class TestSearcher(unittest.TestCase):
     def setUp(self):
@@ -291,9 +301,9 @@ class TestGame(unittest.TestCase):
         ])
         self.game.start(board)
 
-    def test_bad_move(self):
+    def test_bad_swap(self):
         old_board = self.game.board.board.copy()
-        answer = self.game.move(Point(0, 0), Point(0, 1))
+        answer = self.game.swap(Point(0, 0), Point(0, 1))
 
         with self.subTest(returns_none=True):
             self.assertTrue(answer is None)
@@ -308,7 +318,7 @@ class TestGame(unittest.TestCase):
             [4., 8., 5.],
             [6., 5., 8.]
         ])
-        self.game.move(Point(1, 1), Point(0, -1))
+        self.game.swap(Point(1, 1), Point(1, 0))
         answer = self.game.board.board
         self.assertEqual(true.tolist(), answer.tolist())
 

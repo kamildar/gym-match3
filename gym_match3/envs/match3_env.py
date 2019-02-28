@@ -52,7 +52,7 @@ class Match3Env(gym.Env):
             yield point
 
     def __get_availiable_actions(self):
-        actions = []
+        actions = set()
         directions = self.__get_directions(board_ndim=BOARD_NDIM)
         for point in self.__points_generator():
             for axis_dirs in directions:
@@ -61,10 +61,10 @@ class Match3Env(gym.Env):
                     new_point = point + dir_p
                     try:
                         _ = self.__game.board[new_point]
-                        actions.append((point, dir_p))
+                        actions.add(frozenset((point, new_point)))
                     except OutOfBoardError:
                         continue
-        return actions
+        return list(actions)
 
     def __get_action(self, ind):
         return self.__match3_actions[ind]
@@ -74,7 +74,7 @@ class Match3Env(gym.Env):
 
         # make action
         m3_action = self.__get_action(action)
-        reward = self.__game.move(*m3_action)
+        reward = self.__game.swap(*m3_action)
 
         ob = self.__get_board()
         return ob, reward, episode_over, {}

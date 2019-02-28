@@ -44,6 +44,16 @@ class Point(AbstractPoint):
         row2, col2 = other.get_coord()
         return Point(row1 + row2, col1 + col2)
 
+    def __mul__(self, constant):
+        row, col = self.get_coord()
+        return Point(row*constant, col*constant)
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __sub__(self, other):
+        return (-1 * other) + self
+
     def __eq__(self, other):
         return self.get_coord() == other.get_coord()
 
@@ -453,7 +463,7 @@ class AbstractGame(ABC):
         pass
 
     @abstractmethod
-    def move(self):
+    def swap(self):
         pass
 
 
@@ -476,8 +486,8 @@ class Game(AbstractGame):
                 print(self.board.board)
                 input_str = input()
                 coords = input_str.split(', ')
-                a, b, d0, d1 = [int(i) for i in coords]
-                self.move(Point(a, b), Point(d0, d1))
+                a, b, a1, b1 = [int(i) for i in coords]
+                self.swap(Point(a, b), Point(a1, b1))
             except KeyboardInterrupt:
                 break
 
@@ -486,8 +496,14 @@ class Game(AbstractGame):
         self.__operate_untill_possible_moves()
         return self
 
-    def move(self, point: Point, direction: Point):
+    def swap(self, point: Point, point2: Point):
+        direction = point2 - point
+        score = self.__move(point, direction)
+        return score
+
+    def __move(self, point: Point, direction: Point):
         score = 0
+
         matches = self.__check_matches(
             point, direction)
         if len(matches) > 0:
