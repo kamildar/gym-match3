@@ -15,25 +15,28 @@ class Match3Env(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self):
+        self.h = GameConfiguration.NUM_ROWS
+        self.w = GameConfiguration.NUM_COLS
+        self.n_shapes = GameConfiguration.NUM_SHAPES
+        self.rollout_len = GameConfiguration.MOVES_PER_SESSION
+        self.__episode_counter = 0
+
         self.__game = RandomGame(
             rows=GameConfiguration.NUM_ROWS,
             columns=GameConfiguration.NUM_COLS,
             n_shapes=GameConfiguration.NUM_SHAPES,
             length=GameConfiguration.MATCH_LENGTH)
         self.reset()
+        self.renderer = Renderer(GameConfiguration.NUM_SHAPES)
 
         self.observation_space = spaces.Box(
             low=0,
             high=GameConfiguration.NUM_SHAPES,
             shape=self.__game.board.board_size,
             dtype=int)
-
         self.__match3_actions = self.__get_availiable_actions()
         self.action_space = spaces.Discrete(
             len(self.__match3_actions))
-        self.n_shapes = GameConfiguration.NUM_SHAPES
-
-        self.renderer = Renderer(GameConfiguration.NUM_SHAPES)
 
     def __get_directions(self, board_ndim):
         directions = [
@@ -70,13 +73,20 @@ class Match3Env(gym.Env):
         return self.__match3_actions[ind]
 
     def step(self, action):
-        episode_over = False
-
         # make action
         m3_action = self.__get_action(action)
         reward = self.__game.swap(*m3_action)
 
         ob = self.__get_board()
+
+        self.__episode_counter += 1
+        if self.__episode_counter >= self.rollout_len:
+            episode_over = True
+            self.__episode_counter = 0
+            self.reset()
+        else:
+            episode_over = False
+
         return ob, reward, episode_over, {}
 
     def reset(self):
