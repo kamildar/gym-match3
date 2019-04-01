@@ -60,6 +60,12 @@ class Point(AbstractPoint):
     def __hash__(self):
         return hash(self.get_coord())
 
+    def __str__(self):
+        return str(self.get_coord())
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class Cell(Point):
     def __init__(self, shape, row, col):
@@ -184,7 +190,10 @@ class Board(AbstractBoard):
         self.__board = board.astype(float)
 
     def shuffle(self, random_state=None):
-        np.random.shuffle(self.__board)
+        board_ravel = self.__board.ravel()
+        np.random.seed(random_state)
+        np.random.shuffle(board_ravel)
+        self.set_board(board_ravel.reshape(self.board_size))
         return self
 
     def __check_board(self):
@@ -287,7 +296,7 @@ class RandomBoard(Board):
 
 class CustomBoard(Board):
 
-    def __init__(self, board: np.ndarray, n_shapes: int):
+    def __init__(self, board: np.ndarray, n_shapes: int, *args, **kwargs):
         columns, rows = board.shape
         super().__init__(columns, rows, n_shapes)
         self.set_board(board)
@@ -386,12 +395,14 @@ class AbstractMovesSearcher(ABC):
 
 class MovesSearcher(AbstractMovesSearcher, MatchesSearcher):
 
-    def search_moves(self, board: Board):
+    def search_moves(self, board: Board, all_moves=False):
         possible_moves = set()
         for point in self.points_generator(board):
             possible_moves_for_point = self.__search_moves_for_point(
                 board, point)
             possible_moves.update(possible_moves_for_point)
+            if not all_moves:
+                break
         return possible_moves
 
     def __search_moves_for_point(self, board: Board, point: Point):
@@ -469,12 +480,13 @@ class AbstractGame(ABC):
 
 class Game(AbstractGame):
 
-    def __init__(self, rows, columns, n_shapes, length, random_state=None):
+    def __init__(self, rows, columns, n_shapes, length, all_moves=False, random_state=None):
         self.board = Board(
             rows=rows,
             columns=columns,
             n_shapes=n_shapes)
         self.__random_state = random_state
+        self.__all_moves = all_moves
         self.__mtch_searcher = MatchesSearcher(length=length, board_ndim=2)
         self.__mv_searcher = MovesSearcher(length=length, board_ndim=2)
         self.__filler = Filler(random_state)
@@ -538,7 +550,9 @@ class Game(AbstractGame):
         return self.__mtch_searcher.scan_board_for_matches(self.board)
 
     def __get_possible_moves(self):
-        return self.__mv_searcher.search_moves(self.board)
+        return self.__mv_searcher.search_moves(
+            self.board,
+            all_moves=self.__all_moves)
 
     def __scan_del_mvnans_fill_untill(self):
         score = 0
@@ -562,10 +576,10 @@ class Game(AbstractGame):
 
 class RandomGame(Game):
 
-    def start(self, *args, **kwargs):
+    def start(self, random_state=None, *args, **kwargs):
         rows, cols = self.board.board_size
         tmp_board = RandomBoard(rows, cols, self.board.n_shapes)
-        tmp_board.set_random_board()
+        tmp_board.set_random_board(random_state=random_state)
         super().start(tmp_board.board)
 
 

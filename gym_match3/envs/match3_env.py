@@ -3,42 +3,50 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 
 from gym_match3.envs.game import RandomGame, Point, OutOfBoardError
-from gym_match3.envs.configurations import GameConfiguration
 from gym_match3.envs.renderer import Renderer
 
 from itertools import product
+import warnings
 
 BOARD_NDIM = 2
 
 
 class Match3Env(gym.Env):
-    metadata = {'render.modes': ['human']}
+    metadata = {'render.modes': None}
 
-    def __init__(self):
-        self.h = GameConfiguration.NUM_ROWS
-        self.w = GameConfiguration.NUM_COLS
-        self.n_shapes = GameConfiguration.NUM_SHAPES
-        self.rollout_len = GameConfiguration.MOVES_PER_SESSION
+    def __init__(self, h=8, w=8, n_shapes=7, rollout_len=100, all_moves=False, random_state=None):
+        self.h = h
+        self.w = w
+        self.n_shapes = n_shapes
+        self.rollout_len = rollout_len
+        self.random_state = random_state
+        self.all_moves = all_moves
         self.__episode_counter = 0
 
         self.__game = RandomGame(
-            rows=GameConfiguration.NUM_ROWS,
-            columns=GameConfiguration.NUM_COLS,
-            n_shapes=GameConfiguration.NUM_SHAPES,
-            length=GameConfiguration.MATCH_LENGTH)
+            rows=self.h,
+            columns=self.w,
+            n_shapes=self.n_shapes,
+            length=3,
+            all_moves=all_moves,
+            random_state=self.random_state)
         self.reset()
-        self.renderer = Renderer(GameConfiguration.NUM_SHAPES)
+        self.renderer = Renderer(self.n_shapes)
 
+        # setting observation space
         self.observation_space = spaces.Box(
             low=0,
-            high=GameConfiguration.NUM_SHAPES,
+            high=self.n_shapes,
             shape=self.__game.board.board_size,
             dtype=int)
+
+        # setting actions space
         self.__match3_actions = self.__get_availiable_actions()
         self.action_space = spaces.Discrete(
             len(self.__match3_actions))
 
     def __get_directions(self, board_ndim):
+        """ get availiable directions for any number of dimensions """
         directions = [
             [[0 for _ in range(board_ndim)] for _ in range(2)]
             for _ in range(board_ndim)
@@ -49,12 +57,14 @@ class Match3Env(gym.Env):
         return directions
 
     def __points_generator(self):
+        """ iterates over points on the board """
         rows, cols = self.__game.board.board_size
         points = [Point(i, j) for i, j in product(range(rows), range(cols))]
         for point in points:
             yield point
 
     def __get_availiable_actions(self):
+        """ calculate availiabe actions for current board sizes """
         actions = set()
         directions = self.__get_directions(board_ndim=BOARD_NDIM)
         for point in self.__points_generator():
@@ -79,6 +89,7 @@ class Match3Env(gym.Env):
 
         ob = self.__get_board()
 
+        # change counter even action wasn't successful
         self.__episode_counter += 1
         if self.__episode_counter >= self.rollout_len:
             episode_over = True
@@ -89,12 +100,14 @@ class Match3Env(gym.Env):
 
         return ob, reward, episode_over, {}
 
-    def reset(self):
-        self.__game.start(None)
+    def reset(self, *args, **kwargs):
+        self.__game.start(*args, **kwargs)
         return self.__get_board()
 
     def __get_board(self):
         return self.__game.board.board
 
     def render(self, mode='human', close=False):
+        if close:
+            warnings.warn("close=True isn's supported")
         self.renderer.render_board(self.__get_board())

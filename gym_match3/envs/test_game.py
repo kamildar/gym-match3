@@ -256,14 +256,16 @@ class TestMovesSearcher(unittest.TestCase):
             [3, 1, 2]
         ])
         self.board = CustomBoard(board=board, n_shapes=4)
-        self.moves_searcher = MovesSearcher(length=3, board_ndim=2)
+        self.moves_searcher = MovesSearcher(
+            length=3, board_ndim=2)
 
     def test_search_moves(self):
         true = set([
             (Point(2, 0), (0, 1)),
             (Point(2, 1), (0, -1)),
         ])
-        answer = self.moves_searcher.search_moves(board=self.board)
+        answer = self.moves_searcher.search_moves(
+            board=self.board, all_moves=True)
         self.assertEqual(true, answer)
 
 
@@ -294,19 +296,19 @@ class TestGame(unittest.TestCase):
     def setUp(self):
         self.game = Game(rows=3, columns=3, n_shapes=(3*3),
                          length=3, random_state=1)
-        board = np.array([
-            [0, 1, 2],
-            [1, 4, 5],
-            [6, 1, 8]
+        board = board = np.array([
+            [7, 1, 7],
+            [1, 4, 6],
+            [7, 1, 7]
         ])
-        self.game.start(board)
+        self.game.board.set_board(board)
 
     def test_bad_swap(self):
         old_board = self.game.board.board.copy()
         answer = self.game.swap(Point(0, 0), Point(0, 1))
 
-        with self.subTest(returns_none=True):
-            self.assertTrue(answer is None)
+        with self.subTest(returns_zero=True):
+            self.assertTrue(answer == 0)
 
         with self.subTest(same_board=True):
             self.assertEqual(old_board.tolist(),
@@ -314,9 +316,9 @@ class TestGame(unittest.TestCase):
 
     def test_simple_way(self):
         true = np.array([
-            [0., 5., 2.],
-            [4., 8., 5.],
-            [6., 5., 8.]
+            [5., 8., 5.],
+            [6., 5., 5.],
+            [8., 4., 7.]
         ])
         self.game.swap(Point(1, 1), Point(1, 0))
         answer = self.game.board.board
