@@ -87,16 +87,15 @@ class Match3Env(gym.Env):
         m3_action = self.__get_action(action)
         reward = self.__game.swap(*m3_action)
 
-        ob = self.__get_board()
-
         # change counter even action wasn't successful
         self.__episode_counter += 1
         if self.__episode_counter >= self.rollout_len:
             episode_over = True
             self.__episode_counter = 0
-            self.reset()
+            ob = self.reset()
         else:
             episode_over = False
+            ob = self.__get_board()
 
         return ob, reward, episode_over, {}
 
