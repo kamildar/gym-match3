@@ -1,16 +1,19 @@
 import unittest
 import numpy as np
-from .game import (Board,
-                   RandomBoard,
-                   CustomBoard,
-                   Point,
-                   Cell,
-                   AbstractSearcher,
-                   MatchesSearcher,
-                   Filler,
-                   Game,
-                   MovesSearcher,
-                   OutOfBoardError)
+from gym_match3.envs.game import (Board,
+                                  RandomBoard,
+                                  CustomBoard,
+                                  Point,
+                                  Cell,
+                                  AbstractSearcher,
+                                  MatchesSearcher,
+                                  Filler,
+                                  Game,
+                                  MovesSearcher,
+                                  OutOfBoardError,
+                                  ImmovableShapeError)
+from gym_match3.envs.levels import (Match3Levels,
+                                    Level)
 
 
 class TestBoard(unittest.TestCase):
@@ -45,7 +48,7 @@ class TestBoard(unittest.TestCase):
 
     def test_getting_validate_board_size(self):
         """ test getting board size """
-        self.assertEquals(
+        self.assertEqual(
             self.board.board_size, (2, 2))
 
     def test_setting_incorrect_shaped_board(self):
@@ -112,7 +115,7 @@ class TestBoard(unittest.TestCase):
     def test_put_line(self):
         true = self.board.board.copy()
         true[:, 0] = [2, 2]
-        self.board.put_line(0, [2, 2])
+        self.board.put_line(0, np.array([2, 2]))
         answer = self.board.board
         self.assertEqual(true.tolist(), answer.tolist())
 
@@ -205,17 +208,18 @@ class TestMatchesSearcher(unittest.TestCase):
         ]))
         self.searcher_three = MatchesSearcher(3, 2)
 
-    def __to_coord(self, args):
+    @staticmethod
+    def __to_coord(args):
         return sorted([i.get_coord() for i in args])
 
     def test_scan_board(self):
         zeros_answer = self.searcher_three.scan_board_for_matches(
             self.board_3x3_zeros)
-        zeros_true = set([
+        zeros_true = {
             Cell(0, 0, 0),
             Cell(0, 0, 1),
             Cell(0, 0, 2)
-        ])
+        }
 
         seq_answer = self.searcher_three.scan_board_for_matches(
             self.board_3x3_seq)
@@ -223,14 +227,14 @@ class TestMatchesSearcher(unittest.TestCase):
 
         angle_answer = self.searcher_three.scan_board_for_matches(
             self.board_4x4_big_angle)
-        angle_true = set([
+        angle_true = {
             Cell(0, 0, 0),
             Cell(0, 1, 0),
             Cell(0, 2, 0),
             Cell(0, 3, 0),
             Cell(0, 3, 1),
             Cell(0, 3, 2)
-        ])
+        }
 
         with self.subTest(object='zeros'):
             self.assertEqual(
@@ -260,10 +264,10 @@ class TestMovesSearcher(unittest.TestCase):
             length=3, board_ndim=2)
 
     def test_search_moves(self):
-        true = set([
+        true = {
             (Point(2, 0), (0, 1)),
             (Point(2, 1), (0, -1)),
-        ])
+        }
         answer = self.moves_searcher.search_moves(
             board=self.board, all_moves=True)
         self.assertEqual(true, answer)
@@ -273,8 +277,8 @@ class TestFiller(unittest.TestCase):
     def setUp(self):
         board = Board(3, 3, 5)
         board.set_board(np.array([
-            [0,           1,      2],
-            [np.nan,      0,      1],
+            [0, 1, 2],
+            [np.nan, 0, 1],
             [np.nan, np.nan, np.nan]
         ]))
         self.board = board
@@ -294,9 +298,9 @@ class TestFiller(unittest.TestCase):
 class TestGame(unittest.TestCase):
 
     def setUp(self):
-        self.game = Game(rows=3, columns=3, n_shapes=(3*3),
+        self.game = Game(rows=3, columns=3, n_shapes=(3 * 3),
                          length=3, random_state=1)
-        board = board = np.array([
+        board = np.array([
             [7, 1, 7],
             [1, 4, 6],
             [7, 1, 7]
@@ -325,5 +329,146 @@ class TestGame(unittest.TestCase):
         self.assertEqual(true.tolist(), answer.tolist())
 
 
+class TestLevels(unittest.TestCase):
+
+    def setUp(self):
+        self.level = Level(0, 3, 3, 3, [[-1, -1, 0],
+                                        [0, 0, -1],
+                                        [0, 0, -1]])
+        self.m3levels = Match3Levels(5, 6, -1)
+
+    def test_create_board(self):
+        true = [
+            [-1, -1, -1, -1, -1, -1],
+            [-1, -1, -1, -1, 0, -1],
+            [-1, -1, 0, 0, -1, -1],
+            [-1, -1, 0, 0, -1, -1],
+            [-1, -1, -1, -1, -1, -1]
+        ]
+        answer = self.m3levels.create_board(self.level)
+        answer[answer != -1] = 0
+        np.testing.assert_array_equal(true, answer)
+
+
+class TestBoardImmove(TestBoard):
+    def setUp(self):
+        self.board = Board(
+            columns=2, rows=2, n_shapes=3, immovable_shape=-1)
+        board = np.array([
+            [0, 1],
+            [2, 0]
+        ])
+        self.board.set_board(board)
+
+        self.board_wimove = Board(
+            columns=2, rows=2, n_shapes=3, immovable_shape=-1)
+        self.board_wimove.set_board(np.array([
+            [-1, 0],
+            [0, -1]
+        ]))
+
+    def test_availability(self):
+        with self.assertRaises(ImmovableShapeError):
+            self.board_wimove.move(Point(0, 0), Point(0, 1))
+
+        with self.assertRaises(ImmovableShapeError):
+            self.board_wimove.swap(Point(0, 0), Point(1, 1))
+
+        with self.assertRaises(ImmovableShapeError):
+            self.board_wimove.delete({Point(0, 0)})
+
+    def test_putting(self):
+        with self.assertRaises(ImmovableShapeError):
+            mask = np.array([
+                [True, False],
+                [False, False]])
+            self.board_wimove.put_mask(mask, [1])
+
+        with self.assertRaises(ImmovableShapeError):
+            ind = 0
+            self.board_wimove.put_line(ind, np.array([1, 1]))
+
+    def test_shuffle(self):
+        self.board_wimove.shuffle()
+        true = np.array([
+            [True, False],
+            [False, True]
+        ])
+        answer = self.board_wimove.board == -1
+        np.testing.assert_array_equal(true, answer)
+
+
+class TestSearcherImmove(TestSearcher):
+    def setUp(self):
+        self.board = Board(columns=3, rows=3, n_shapes=10, immovable_shape=-1)
+        board = np.array([
+            [-1, -1, -1],
+            [-1, 0, -1],
+            [-1, -1, 0]
+        ])
+        self.board.set_board(board)
+        self.searcher = MatchesSearcher(3, 2)
+
+    def test_points_generator(self):
+        answer = {i for i in self.searcher.points_generator(self.board)}
+        true = {
+            Point(1, 1),
+            Point(2, 2)
+        }
+        self.assertEqual(true, answer)
+
+
+class TestMovesSearcherImmove(TestMovesSearcher):
+    def setUp(self):
+        board = np.array([
+            [1, 2, 0],
+            [1, 3, 0],
+            [3, 1, 2]
+        ])
+        self.board = Board(columns=3, rows=3, n_shapes=4, immovable_shape=-1)
+        self.board.set_board(board)
+
+        board_wimmove = np.array([
+            [-1, -1, 1],
+            [1, 1, -1],
+            [2, 1, 1]
+        ])
+        self.board_wimmove = Board(columns=3, rows=3, n_shapes=4, immovable_shape=-1)
+        self.board_wimmove.set_board(board_wimmove)
+
+        self.moves_searcher = MovesSearcher(
+            length=3, board_ndim=2)
+
+    def test_search_moves(self):
+        true = {
+            (Point(1, 0), (1, 0)),
+            (Point(2, 0), (-1, 0)),
+        }
+        answer = self.moves_searcher.search_moves(
+            board=self.board_wimmove, all_moves=True)
+        self.assertEqual(true, answer)
+
+
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestFillerImmove(unittest.TestCase):
+    def setUp(self) -> None:
+        self.filler = Filler()
+
+    def test_move_line(self):
+        cases = [
+            ([1, -1, 99, np.nan, np.nan, 1], [np.nan, -1, np.nan, 1, 99, 1]),
+            ([1, -1, 99, 2, np.nan, 1], [np.nan, -1, 1, 99, 2, 1]),
+            ([1, 1, 1, 1], [1, 1, 1, 1]),
+            ([np.nan, np.nan, np.nan], [np.nan, np.nan, np.nan]),
+            ([-1, -1, 0, np.nan], [-1, -1, np.nan, 0]),
+            ([-1, -1, np.nan, np.nan], [-1, -1, np.nan, np.nan]),
+            ([-1, -1, 2, 0], [-1, -1, 2, 0]),
+        ]
+
+        for line, correct in cases:
+            with self.subTest(case=str(line)):
+                new_line = self.filler._move_line(np.array(line), -1)
+                np.testing.assert_array_equal(new_line, correct)

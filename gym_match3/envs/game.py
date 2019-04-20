@@ -1,12 +1,15 @@
-import random
 import copy
 from itertools import product
-import warnings
+from functools import wraps
 from abc import ABC, abstractmethod
 import numpy as np
 
 
 class OutOfBoardError(IndexError):
+    pass
+
+
+class ImmovableShapeError(ValueError):
     pass
 
 
@@ -37,22 +40,25 @@ class Point(AbstractPoint):
         self.__col = col
 
     def get_coord(self):
-        return (self.__row, self.__col)
+        return self.__row, self.__col
 
     def __add__(self, other):
         row1, col1 = self.get_coord()
         row2, col2 = other.get_coord()
         return Point(row1 + row2, col1 + col2)
 
+    def __radd__(self, other):
+        return self.__add__(other)
+
     def __mul__(self, constant):
         row, col = self.get_coord()
-        return Point(row*constant, col*constant)
+        return Point(row * constant, col * constant)
 
     def __rmul__(self, other):
         return self.__mul__(other)
 
     def __sub__(self, other):
-        return (-1 * other) + self
+        return -1 * other + self
 
     def __eq__(self, other):
         return self.get_coord() == other.get_coord()
@@ -83,7 +89,7 @@ class Cell(Point):
     def __eq__(self, other):
         eq_shape = self.shape == other.shape
         eq_points = super().__eq__(other)
-        return (eq_shape and eq_points)
+        return eq_shape and eq_points
 
     def __hash__(self):
         return hash((self.shape, self.get_coord()))
@@ -143,14 +149,27 @@ class AbstractBoard(ABC):
         pass
 
 
+def check_availability_dec(func):
+    @wraps(func)
+    def wrapped(self, *args):
+        self._check_availability(*args)
+        return func(self, *args)
+
+    return wrapped
+
+
 class Board(AbstractBoard):
     """ board for match3 game"""
 
-    def __init__(self, rows, columns, n_shapes):
+    def __init__(self, rows, columns, n_shapes, immovable_shape=-1):
         self.__rows = rows
         self.__columns = columns
         self.__n_shapes = n_shapes
+        self.__immovable_shape = immovable_shape
         self.__board = None  # np.ndarray
+
+        if 0 <= immovable_shape < n_shapes:
+            raise ValueError('Immovable shape has to be less or greater than n_shapes')
 
     def __getitem__(self, indx: Point):
         self.__check_board()
@@ -172,13 +191,16 @@ class Board(AbstractBoard):
         return self.board.board
 
     @property
+    def immovable_shape(self):
+        return self.__immovable_shape
+
+    @property
     def board(self):
         self.__check_board()
         return self.__board
 
     @property
     def board_size(self):
-        rows, cols = None, None
         if self.__is_board_exist():
             rows, cols = self.board.shape
         else:
@@ -190,11 +212,11 @@ class Board(AbstractBoard):
         self.__board = board.astype(float)
 
     def shuffle(self, random_state=None):
-        board_ravel = self.__board.ravel()
+        moveable_mask = self.board != self.immovable_shape
+        board_ravel = self.board[moveable_mask]
         np.random.seed(random_state)
         np.random.shuffle(board_ravel)
-        self.set_board(board_ravel.reshape(self.board_size))
-        return self
+        self.put_mask(moveable_mask, board_ravel)
 
     def __check_board(self):
         if not self.__is_board_exist():
@@ -204,6 +226,7 @@ class Board(AbstractBoard):
     def n_shapes(self):
         return self.__n_shapes
 
+    @check_availability_dec
     def swap(self, point1: Point, point2: Point):
         point1_shape = self.get_shape(point1)
         point2_shape = self.get_shape(point2)
@@ -214,12 +237,13 @@ class Board(AbstractBoard):
         self[point] = shape
 
     def move(self, point: Point, direction: Point):
+        self._check_availability(point)
         new_point = point + direction
         self.swap(point, new_point)
 
     def __is_board_exist(self):
-        existance = (self.__board is not None)
-        return existance
+        existence = (self.__board is not None)
+        return existence
 
     def __validate_board(self, board: np.ndarray):
         self.__validate_max_shape(board)
@@ -234,9 +258,9 @@ class Board(AbstractBoard):
                              f'{provided_board_shape} vs {right_board_shape}')
 
     def __validate_max_shape(self, board: np.ndarray):
-        provided_max_shape = np.nanmax(board)
-        if np.isnan(provided_max_shape):
+        if np.all(np.isnan(board)):
             return
+        provided_max_shape = np.nanmax(board)
 
         right_max_shape = self.n_shapes
         if provided_max_shape > right_max_shape:
@@ -259,25 +283,43 @@ class Board(AbstractBoard):
         correct_col = ((col + 1) <= board_cols) and (col >= 0)
         return correct_row and correct_col
 
+    def _check_availability(self, *args):
+        for p in args:
+            shape = self.get_shape(p)
+            if shape == self.immovable_shape:
+                raise ImmovableShapeError
+
     def delete(self, points: set):
-        coords = tuple(np.array([i.get_coord() for i in points]).T.tolist())
-        self.__board[coords] = np.nan
+        self._check_availability(*points)
+        coordinates = tuple(np.array([i.get_coord() for i in points]).T.tolist())
+        self.__board[coordinates] = np.nan
         return self
 
     def get_line(self, ind, axis=1):
         return np.take(self.board, ind, axis=axis)
 
-    def put_line(self, ind, line: list):
-        # TODO: create board with putting lines
-        # on arbitrary axis
+    def put_line(self, ind, line: np.ndarray):
+        # TODO: create board with putting lines on arbitrary axis
+        self.__validate_line(ind, line)
         self.__validate_max_shape(line)
         self.__board[:, ind] = line
         return self
 
     def put_mask(self, mask, shapes):
+        self.__validate_mask(mask)
         self.__validate_max_shape(shapes)
         self.__board[mask] = shapes
         return self
+
+    def __validate_mask(self, mask):
+        if np.any(self.board[mask] == self.immovable_shape):
+            raise ImmovableShapeError
+
+    def __validate_line(self, ind, line):
+        immove_mask = self.board[:, ind] == self.immovable_shape
+        new_immove_mask = np.array(line) == self.immovable_shape
+        if not np.array_equal(immove_mask, new_immove_mask):
+            raise ImmovableShapeError
 
 
 class RandomBoard(Board):
@@ -296,7 +338,7 @@ class RandomBoard(Board):
 
 class CustomBoard(Board):
 
-    def __init__(self, board: np.ndarray, n_shapes: int, *args, **kwargs):
+    def __init__(self, board: np.ndarray, n_shapes: int):
         columns, rows = board.shape
         super().__init__(columns, rows, n_shapes)
         self.set_board(board)
@@ -306,7 +348,8 @@ class AbstractSearcher(ABC):
     def __init__(self, board_ndim):
         self.__directions = self.__get_directions(board_ndim)
 
-    def __get_directions(self, board_ndim):
+    @staticmethod
+    def __get_directions(board_ndim):
         directions = [
             [[0 for _ in range(board_ndim)] for _ in range(2)]
             for _ in range(board_ndim)
@@ -320,11 +363,15 @@ class AbstractSearcher(ABC):
     def directions(self):
         return self.__directions
 
-    def points_generator(self, board: Board):
+    @staticmethod
+    def points_generator(board: Board):
         rows, cols = board.board_size
         points = [Point(i, j) for i, j in product(range(rows), range(cols))]
         for point in points:
-            yield point
+            if board[point] == board.immovable_shape:
+                continue
+            else:
+                yield point
 
     def axis_directions_gen(self):
         for axis_dirs in self.directions:
@@ -414,7 +461,7 @@ class MovesSearcher(AbstractMovesSearcher, MatchesSearcher):
                 matches = self.scan_board_for_matches(board)
                 # inverse move
                 board.move(point, Point(*direction))
-            except OutOfBoardError:
+            except (OutOfBoardError, ImmovableShapeError):
                 continue
             if len(matches) > 0:
                 possible_moves.add((point, tuple(direction)))
@@ -424,7 +471,7 @@ class MovesSearcher(AbstractMovesSearcher, MatchesSearcher):
 class AbstractFiller(ABC):
 
     @abstractmethod
-    def move_and_fill(self):
+    def move_and_fill(self, board):
         pass
 
 
@@ -442,20 +489,32 @@ class Filler(AbstractFiller):
         for col_ind in range(cols):
             line = board.get_line(col_ind)
             if np.any(np.isnan(line)):
-                new_line = self.__move_line(line)
+                new_line = self._move_line(line, board.immovable_shape)
                 board.put_line(col_ind, new_line)
             else:
                 continue
 
-    def __move_line(self, line):
-        is_nan_array = np.isnan(line)
-        num_of_nan = is_nan_array.sum()
-        argsort_line = np.zeros_like(line)
-        argsort_line[is_nan_array] = np.inf
-        argsort_line[~is_nan_array] = np.arange(
-            len(argsort_line) - num_of_nan)[::-1]
-        argsort_inds = np.argsort(argsort_line)[::-1]
-        return line[argsort_inds]
+    @staticmethod
+    def _move_line(line, immovable_shape):
+        new_line = np.zeros_like(line)
+        num_of_nans = np.isnan(line).sum()
+        immov_mask = (line == immovable_shape)
+        nans_mask = np.isnan(line)
+        new_line[immov_mask] = immovable_shape
+
+        num_putted = 0
+        for ind, shape in enumerate(new_line):
+
+            if shape != immovable_shape and num_putted < num_of_nans:
+                new_line[ind] = np.nan
+                num_putted += 1
+                if num_putted == num_of_nans:
+                    break
+
+        spec_mask = nans_mask | immov_mask
+        regular_values = line[~spec_mask]
+        new_line[(new_line == 0)] = regular_values
+        return new_line
 
     def __fill(self, board):
         is_nan_mask = np.isnan(board.board)
@@ -470,28 +529,32 @@ class Filler(AbstractFiller):
 class AbstractGame(ABC):
 
     @abstractmethod
-    def start(self):
+    def start(self, board):
         pass
 
     @abstractmethod
-    def swap(self):
+    def swap(self, point, point2):
         pass
 
 
 class Game(AbstractGame):
 
-    def __init__(self, rows, columns, n_shapes, length, all_moves=False, random_state=None):
+    def __init__(self, rows, columns, n_shapes, length,
+                 all_moves=False,
+                 immovable_shape=-1,
+                 random_state=None):
         self.board = Board(
             rows=rows,
             columns=columns,
             n_shapes=n_shapes)
         self.__random_state = random_state
+        self.__immovable_shape = immovable_shape
         self.__all_moves = all_moves
         self.__mtch_searcher = MatchesSearcher(length=length, board_ndim=2)
         self.__mv_searcher = MovesSearcher(length=length, board_ndim=2)
-        self.__filler = Filler(random_state)
+        self.__filler = Filler(random_state=random_state)
 
-    def play(self, board: np.ndarray):
+    def play(self, board: np.ndarray or None):
         self.start(board)
         while True:
             try:
@@ -503,10 +566,23 @@ class Game(AbstractGame):
             except KeyboardInterrupt:
                 break
 
-    def start(self, board: np.ndarray):
+    def start(self, board: np.ndarray or None):
+        # TODO: check consistency of movable figures and n_shapes
+        if board is None:
+            rows, cols = self.board.board_size
+            board = RandomBoard(rows, cols, self.board.n_shapes)
+            board.set_random_board(random_state=self.__random_state)
+            board = board.board
         self.board.set_board(board)
-        self.__operate_untill_possible_moves()
+        self.__operate_until_possible_moves()
+
         return self
+
+    def __start_random(self):
+        rows, cols = self.board.board_size
+        tmp_board = RandomBoard(rows, cols, self.board.n_shapes)
+        tmp_board.set_random_board(random_state=self.__random_state)
+        super().start(tmp_board.board)
 
     def swap(self, point: Point, point2: Point):
         direction = point2 - point
@@ -524,7 +600,7 @@ class Game(AbstractGame):
             self.board.move(point, direction)
             self.board.delete(matches)
             self.__filler.move_and_fill(self.board)
-            score += self.__operate_untill_possible_moves()
+            score += self.__operate_until_possible_moves()
 
         return score
 
@@ -537,13 +613,13 @@ class Game(AbstractGame):
     def __get_copy_of_board(self):
         return copy.deepcopy(self.board)
 
-    def __operate_untill_possible_moves(self):
+    def __operate_until_possible_moves(self):
         """
         scan board, then delete matches, move nans, fill
-        repeat untill no matches and appear possible moves
+        repeat until no matches and appear possible moves
         """
-        score = self.__scan_del_mvnans_fill_untill()
-        self.__shuffle_untill_possible()
+        score = self.__scan_del_mvnans_fill_until()
+        self.__shuffle_until_possible()
         return score
 
     def __get_matches(self):
@@ -554,7 +630,7 @@ class Game(AbstractGame):
             self.board,
             all_moves=self.__all_moves)
 
-    def __scan_del_mvnans_fill_untill(self):
+    def __scan_del_mvnans_fill_until(self):
         score = 0
         matches = self.__get_matches()
         score += len(matches)
@@ -565,11 +641,11 @@ class Game(AbstractGame):
             score += len(matches)
         return score
 
-    def __shuffle_untill_possible(self):
+    def __shuffle_until_possible(self):
         possible_moves = self.__get_possible_moves()
         while len(possible_moves) == 0:
             self.board.shuffle(self.__random_state)
-            self.__scan_del_mvnans_fill_untill()
+            self.__scan_del_mvnans_fill_until()
             possible_moves = self.__get_possible_moves()
         return self
 
@@ -581,14 +657,3 @@ class RandomGame(Game):
         tmp_board = RandomBoard(rows, cols, self.board.n_shapes)
         tmp_board.set_random_board(random_state=random_state)
         super().start(tmp_board.board)
-
-
-def main():
-    import warnings
-    # warnings.simplefilter("error", "RuntimeWarning")
-    game = RandomGame(3, 3, length=3, n_shapes=4, random_state=1)
-    game.play(None)
-
-
-if __name__ == '__main__':
-    main()

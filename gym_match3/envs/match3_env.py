@@ -2,7 +2,8 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 
-from gym_match3.envs.game import RandomGame, Point, OutOfBoardError
+from gym_match3.envs.game import Game, Point
+from gym_match3.envs.game import OutOfBoardError, ImmovableShapeError
 from gym_match3.envs.renderer import Renderer
 
 from itertools import product
@@ -23,7 +24,7 @@ class Match3Env(gym.Env):
         self.all_moves = all_moves
         self.__episode_counter = 0
 
-        self.__game = RandomGame(
+        self.__game = Game(
             rows=self.h,
             columns=self.w,
             n_shapes=self.n_shapes,
@@ -41,12 +42,13 @@ class Match3Env(gym.Env):
             dtype=int)
 
         # setting actions space
-        self.__match3_actions = self.__get_availiable_actions()
+        self.__match3_actions = self.__get_available_actions()
         self.action_space = spaces.Discrete(
             len(self.__match3_actions))
 
-    def __get_directions(self, board_ndim):
-        """ get availiable directions for any number of dimensions """
+    @staticmethod
+    def __get_directions(board_ndim):
+        """ get available directions for any number of dimensions """
         directions = [
             [[0 for _ in range(board_ndim)] for _ in range(2)]
             for _ in range(board_ndim)
@@ -63,8 +65,8 @@ class Match3Env(gym.Env):
         for point in points:
             yield point
 
-    def __get_availiable_actions(self):
-        """ calculate availiabe actions for current board sizes """
+    def __get_available_actions(self):
+        """ calculate available actions for current board sizes """
         actions = set()
         directions = self.__get_directions(board_ndim=BOARD_NDIM)
         for point in self.__points_generator():
@@ -85,7 +87,7 @@ class Match3Env(gym.Env):
     def step(self, action):
         # make action
         m3_action = self.__get_action(action)
-        reward = self.__game.swap(*m3_action)
+        reward = self.__swap(*m3_action)
 
         # change counter even action wasn't successful
         self.__episode_counter += 1
@@ -100,13 +102,20 @@ class Match3Env(gym.Env):
         return ob, reward, episode_over, {}
 
     def reset(self, *args, **kwargs):
-        self.__game.start(*args, **kwargs)
+        self.__game.start(board=None)
         return self.__get_board()
+
+    def __swap(self, point1, point2):
+        try:
+            reward = self.__game.swap(point1, point2)
+        except ImmovableShapeError:
+            reward = 0
+        return reward
 
     def __get_board(self):
         return self.__game.board.board
 
     def render(self, mode='human', close=False):
         if close:
-            warnings.warn("close=True isn's supported")
-        self.renderer.render_board(self.__get_board())
+            warnings.warn("close=True isn't supported yet")
+        self.renderer.render_board(self.__game.board)
