@@ -4,6 +4,7 @@ from gym.utils import seeding
 
 from gym_match3.envs.game import Game, Point
 from gym_match3.envs.game import OutOfBoardError, ImmovableShapeError
+from gym_match3.envs.levels import LEVELS, Match3Levels
 from gym_match3.envs.renderer import Renderer
 
 from itertools import product
@@ -15,13 +16,14 @@ BOARD_NDIM = 2
 class Match3Env(gym.Env):
     metadata = {'render.modes': None}
 
-    def __init__(self, h=8, w=8, n_shapes=7, rollout_len=100, all_moves=False, random_state=None):
-        self.h = h
-        self.w = w
-        self.n_shapes = n_shapes
+    def __init__(self, rollout_len=100, all_moves=False, levels=None, random_state=None):
         self.rollout_len = rollout_len
         self.random_state = random_state
         self.all_moves = all_moves
+        self.levels = levels or Match3Levels(LEVELS)
+        self.h = self.levels.h
+        self.w = self.levels.w
+        self.n_shapes = self.levels.n_shapes
         self.__episode_counter = 0
 
         self.__game = Game(
@@ -102,7 +104,8 @@ class Match3Env(gym.Env):
         return ob, reward, episode_over, {}
 
     def reset(self, *args, **kwargs):
-        self.__game.start(board=None)
+        board = self.levels.sample()
+        self.__game.start(board)
         return self.__get_board()
 
     def __swap(self, point1, point2):
