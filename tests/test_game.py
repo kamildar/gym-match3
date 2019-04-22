@@ -332,10 +332,12 @@ class TestGame(unittest.TestCase):
 class TestLevels(unittest.TestCase):
 
     def setUp(self):
-        self.level = Level(0, 3, 3, 3, [[-1, -1, 0],
-                                        [0, 0, -1],
-                                        [0, 0, -1]])
-        self.m3levels = Match3Levels(5, 6, -1)
+        self.level = Level(5, 6, 3, [
+            [-1, -1, 0],
+            [0, 0, -1],
+            [0, 0, -1]
+        ])
+        self.m3levels = Match3Levels([self.level], -1)
 
     def test_create_board(self):
         true = [
