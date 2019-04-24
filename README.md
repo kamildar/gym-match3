@@ -35,4 +35,27 @@ For more information on `gym` interface visit [gym documentation](https://gym.op
 
 
 ### Levels
-tbc
+Environment supports custom levels.
+Example:
+```python
+from gym_match3.envs import Match3Env
+from gym_match3.envs.levels import LEVELS #  defult levels
+from gym_match3.envs.levels import Match3Levels, Level
+
+
+custom_level = Level(h=9, w=9, n_shape=6, board=[
+    [-1, -1, -1, -1, 0, -1, -1, -1, -1],
+    [-1, -1, -1,  0, 0,  0, -1, -1, -1],
+    [-1, -1,  0,  0, 0,  0,  0, -1, -1],
+    [-1,  0,  0,  0, 0,  0,  0,  0, -1],
+    [ 0,  0,  0,  0, 0,  0,  0,  0,  0],
+    [-1,  0,  0,  0, 0,  0,  0,  0, -1],
+    [-1, -1,  0,  0, 0,  0,  0, -1, -1],
+    [-1, -1, -1,  0, 0,  0, -1, -1, -1],
+    [-1, -1, -1, -1, 0, -1, -1, -1, -1],
+])
+
+# create an instance with extended levels
+custom_m3_levels = Match3Levels(levels=LEVELS + [custom_level]) 
+env = Match3Env(levels=custom_m3_levels) 
+```
