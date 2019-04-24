@@ -1,6 +1,6 @@
 # gym-match3
 
-`gym-match3` is an environment for reinforcement learning puroses (`link to smth`).
+`gym-match3` is an environment for reinforcement learning purposes (`link to smth`).
 It replicates Match-3 board and allows to create your own levels.
     
 
@@ -39,7 +39,7 @@ Environment supports custom levels.
 Example:
 ```python
 from gym_match3.envs import Match3Env
-from gym_match3.envs.levels import LEVELS #  defult levels
+from gym_match3.envs.levels import LEVELS #  default levels
 from gym_match3.envs.levels import Match3Levels, Level
 
 
