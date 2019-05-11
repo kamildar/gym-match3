@@ -1,6 +1,6 @@
 # gym-match3
 
-`gym-match3` is an environment for reinforcement learning purposes (`link to smth`).
+`gym-match3` is an environment for reinforcement learning purposes.
 It replicates Match-3 board and allows to create your own levels.
     
 
@@ -35,7 +35,7 @@ For more information on `gym` interface visit [gym documentation](https://gym.op
 
 
 ### Levels
-Environment supports custom levels.
+Current number of levels is 30, but environment supports custom levels.
 Example:
 ```python
 from gym_match3.envs import Match3Env
@@ -44,15 +44,15 @@ from gym_match3.envs.levels import Match3Levels, Level
 
 
 custom_level = Level(h=9, w=9, n_shape=6, board=[
-    [-1, -1, -1, -1, 0, -1, -1, -1, -1],
-    [-1, -1, -1,  0, 0,  0, -1, -1, -1],
-    [-1, -1,  0,  0, 0,  0,  0, -1, -1],
-    [-1,  0,  0,  0, 0,  0,  0,  0, -1],
-    [ 0,  0,  0,  0, 0,  0,  0,  0,  0],
-    [-1,  0,  0,  0, 0,  0,  0,  0, -1],
-    [-1, -1,  0,  0, 0,  0,  0, -1, -1],
-    [-1, -1, -1,  0, 0,  0, -1, -1, -1],
-    [-1, -1, -1, -1, 0, -1, -1, -1, -1],
+    [-1, -1, -1, -1,  0, -1, -1, -1, -1],
+    [-1, -1, -1,  0,  0,  0, -1, -1, -1],
+    [-1, -1,  0,  0,  0,  0,  0, -1, -1],
+    [-1,  0,  0,  0,  0,  0,  0,  0, -1],
+    [ 0,  0,  0,  0,  0,  0,  0,  0,  0],
+    [-1,  0,  0,  0,  0,  0,  0,  0, -1],
+    [-1, -1,  0,  0,  0,  0,  0, -1, -1],
+    [-1, -1, -1,  0,  0,  0, -1, -1, -1],
+    [-1, -1, -1, -1,  0, -1, -1, -1, -1],
 ])
 
 # create an instance with extended levels
