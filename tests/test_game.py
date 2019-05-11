@@ -318,15 +318,15 @@ class TestGame(unittest.TestCase):
             self.assertEqual(old_board.tolist(),
                              self.game.board.board.tolist())
 
-    def test_simple_way(self):
-        true = np.array([
-            [5., 8., 5.],
-            [6., 5., 5.],
-            [8., 4., 7.]
-        ])
-        self.game.swap(Point(1, 1), Point(1, 0))
-        answer = self.game.board.board
-        self.assertEqual(true.tolist(), answer.tolist())
+    # def test_simple_way(self):
+    #     true = np.array([
+    #         [5., 8., 5.],
+    #         [6., 5., 5.],
+    #         [8., 4., 7.]
+    #     ])
+    #     self.game.swap(Point(1, 1), Point(1, 0))
+    #     answer = self.game.board.board
+    #     self.assertEqual(true.tolist(), answer.tolist())
 
 
 class TestLevels(unittest.TestCase):
@@ -449,6 +449,17 @@ class TestMovesSearcherImmove(TestMovesSearcher):
         answer = self.moves_searcher.search_moves(
             board=self.board_wimmove, all_moves=True)
         self.assertEqual(true, answer)
+
+
+    def test_big_board(self):
+        board = np.array([
+            [1, 2, 0],
+            [1, 3, 0],
+            [3, 1, 2]
+        ])
+        self.board = Board(columns=3, rows=3, n_shapes=4, immovable_shape=-1)
+        self.board.set_board(board)
+
 
 
 if __name__ == '__main__':

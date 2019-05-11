@@ -448,7 +448,7 @@ class MovesSearcher(AbstractMovesSearcher, MatchesSearcher):
             possible_moves_for_point = self.__search_moves_for_point(
                 board, point)
             possible_moves.update(possible_moves_for_point)
-            if not all_moves:
+            if len(possible_moves_for_point) > 0 and not all_moves:
                 break
         return possible_moves
 
