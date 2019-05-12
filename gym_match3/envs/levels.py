@@ -1,6 +1,7 @@
 import numpy as np
 from collections import namedtuple
 import random
+from gym_match3.envs.game import Board
 
 Level = namedtuple("Level", ["h", "w", "n_shapes", "board"])
 
@@ -32,10 +33,11 @@ class Match3Levels:
 
     def sample(self):
         """
-        :return: random level's board
+        :return: board for random level
         """
-        level = random.sample(self.levels, 1)[0]
-        return self.create_board(level)
+        level_template = random.sample(self.levels, 1)[0]
+        board = self.create_board(level_template)
+        return board
 
     @staticmethod
     def __set_dim(d, ds):
@@ -53,9 +55,11 @@ class Match3Levels:
                                  'to maximum in levels')
         return d
 
-    def create_board(self, level: Level) -> np.ndarray:
+    def create_board(self, level: Level) -> Board:
         empty_board = np.random.randint(0, level.n_shapes, size=(self.__h, self.__w))
-        board = self.__put_immovable(empty_board, level)
+        board_array = self.__put_immovable(empty_board, level)
+        board = Board(self.__h, self.__w, level.n_shapes, self.__immovable_shape)
+        board.set_board(board_array)
         return board
 
     def __put_immovable(self, board, level):
@@ -106,7 +110,7 @@ class Match3Levels:
 
 
 LEVELS = [
-    Level(5, 8, 3, [
+    Level(5, 8, 5, [
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],

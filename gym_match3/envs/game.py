@@ -566,14 +566,18 @@ class Game(AbstractGame):
             except KeyboardInterrupt:
                 break
 
-    def start(self, board: np.ndarray or None):
+    def start(self, board: np.ndarray or None or Board):
         # TODO: check consistency of movable figures and n_shapes
         if board is None:
             rows, cols = self.board.board_size
             board = RandomBoard(rows, cols, self.board.n_shapes)
             board.set_random_board(random_state=self.__random_state)
             board = board.board
-        self.board.set_board(board)
+            self.board.set_board(board)
+        elif isinstance(board, np.ndarray):
+            self.board.set_board(board)
+        elif isinstance(board, Board):
+            self.board = board
         self.__operate_until_possible_moves()
 
         return self
