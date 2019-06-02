@@ -116,7 +116,7 @@ class Match3Env(gym.Env):
         return reward
 
     def __get_board(self):
-        return self.__game.board.board
+        return self.__game.board.board.copy()
 
     def render(self, mode='human', close=False):
         if close:
