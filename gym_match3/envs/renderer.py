@@ -1,8 +1,9 @@
 import numpy as np
-import matplotlib
 from matplotlib import colors
 from gym_match3.envs.game import Board
 
+# PyCharm debugger failed with default matplotlib backend
+import matplotlib
 matplotlib.use("TkAgg")
 
 import matplotlib.pyplot as plt
